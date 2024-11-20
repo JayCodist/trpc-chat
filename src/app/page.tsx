@@ -107,9 +107,11 @@ export default function Home() {
           ))}
         </div>
         <div className="flex flex-col gap-2 w-[60vw]">
-          {Object.entries(messagesMap).map(([chatRoomId, messages]) => (
-            <div
-              key={chatRoomId}
+          {Object.entries(messagesMap)
+            .filter(([, messages]) => messages)
+            .map(([chatRoomId, messages]) => (
+              <div
+                key={chatRoomId}
               className="w-full relative h-[60vh] mb-6 flex flex-col justify-between border border-gray-300 rounded-md px-4 pb-20"
             >
               <h1 className="text-xl font-bold mt-2 mb-6 text-center">
