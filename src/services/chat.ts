@@ -1,3 +1,5 @@
+"use client";
+
 import { getClient } from '@/store/trpcStore';
 import { useChatStore } from '@/store/chatStore';
 import { Message } from '@/types';
@@ -12,7 +14,9 @@ export const fetchChatRooms = async () => {
 
 export const sendMessage = async ({ text, chatRoomId, userName }: { text: string, chatRoomId: string, userName: string }) => {
   const client = getClient();
-  if (!client) throw new Error('TRPC client not initialized');
+  if (!client) {
+    return;
+  }
 
   const message = await client.sendMessage.mutate({
     text,
@@ -26,30 +30,38 @@ export const sendMessage = async ({ text, chatRoomId, userName }: { text: string
 
 export const fetchRecentMessages = async (chatRoomId: string) => {
   const client = getClient();
-  if (!client) throw new Error('TRPC client not initialized');
+  if (!client) {
+    return;
+  }
   const messages = await client.getRecentMessages.query({ chatRoomId });
   useChatStore.getState().initializeMessages(chatRoomId, messages);
 }
 
 export const fetchChatRoomMessages = async (chatRoomId: string) => {
   const client = getClient();
-  if (!client) throw new Error('TRPC client not initialized');
+  if (!client) {
+    return;
+  }
   const messages = await client.getRecentMessages.query({ chatRoomId });
   useChatStore.getState().initializeMessages(chatRoomId, messages);
 }
 
 export const signIn = async (username: string) => {
   const client = getClient();
-  if (!client) throw new Error('TRPC client not initialized');
+  if (!client) {
+    return;
+  }
   await client.signIn.mutate({ username });
   fetchChatRooms();
 }
 
 export const enterChatRoom = async (chatRoomId: string) => {
   const client = getClient();
-
+  if (!client) {
+    return;
+  }
   await fetchRecentMessages(chatRoomId);
-  const unsubscribe = client?.onMessage.subscribe({ chatRoomId }, {
+  const unsubscribe = client.onMessage.subscribe({ chatRoomId }, {
     onData: (message: Message) => {
       useChatStore.getState().addMessage(message);
     }

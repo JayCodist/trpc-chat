@@ -18,7 +18,7 @@ export const chatRoomSchema = z.object({
   id: z.string(),
   name: z.string(),
   userCount: z.number(),
-  createdAt: z.date(),
+  createdAt: z.number(),
 });
 
 export type Message = z.infer<typeof messageSchema>;

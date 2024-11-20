@@ -7,9 +7,9 @@ export function createWSServer(port: number) {
   const handler = applyWSSHandler({ wss, router: appRouter });
 
   wss.on('connection', (ws) => {
-    console.log(`➕➕ Connection opened, remaining (${wss.clients.size}) clients`);
+    console.log(`➕➕ Connection opened, left at (${wss.clients.size}) clients`);
     ws.once('close', () => {
-      console.log(`➖➖ Connection closed, remaining (${wss.clients.size}) clients`);
+      console.log(`➖➖ Connection closed, left at (${wss.clients.size}) clients`);
     });
   });
 

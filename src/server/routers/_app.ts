@@ -1,65 +1,28 @@
 import { router, publicProcedure } from "../trpc";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";
-import { v4 as uuidv4 } from "uuid";
-import { ChatRoom, messageSchema, User, Message, userSchema } from "../../types";
-
-
-
-// In-memory message storage (replace with database later)
-const messages: Message [] = [];
-const chatRooms: ChatRoom[] = [
-  {
-    id: uuidv4(),
-    name: "The Rooks",
-    userCount: 0,
-    createdAt: new Date(),
-  },
-  {
-    id: uuidv4(),
-    name: "The Bishops",
-    userCount: 0,
-    createdAt: new Date(),
-  },
-  {
-    id: uuidv4(),
-    name: "The Knights",
-    userCount: 0,
-    createdAt: new Date(),
-  },
-  {
-    id: uuidv4(),
-    name: "The Queens",
-    userCount: 0,
-    createdAt: new Date(),
-  },
-  {
-    id: uuidv4(),
-    name: "The Pawns",
-    userCount: 0,
-    createdAt: new Date(),
-  },
-];
-const users: User[] = [];
+import { messageSchema, Message, userSchema } from "../../types";
+import { ChatRoomModel } from "../models/ChatRoom";
+import { UserModel } from "../models/User";
+import { MessageModel } from "../models/Message";
 
 export const appRouter = router({
   getChatRooms: publicProcedure.query(() => {
-    return chatRooms;
+    return ChatRoomModel.find().lean().exec();
   }),
 
   getRecentMessages: publicProcedure.input(z.object({ chatRoomId: z.string() })).query(({ input }) => {
-    return messages.filter((message) => message.chatRoomId === input.chatRoomId);
+    return MessageModel.find({ chatRoomId: input.chatRoomId }).sort({ timestamp: -1 }).limit(100).lean().exec();
   }),
 
   signIn: publicProcedure
     .input(userSchema.omit({ id: true }))
     .mutation(({ input }) => {
-      users.push({ id: uuidv4(), ...input });
+      return UserModel.create({ ...input });
     }),
 
-  sendMessage: publicProcedure.input(messageSchema.omit({ id: true, timestamp: true, reactionDiff: true })).mutation(({ input }) => {
-    const newMessage: Message = {
-      id: uuidv4(),
+  sendMessage: publicProcedure.input(messageSchema.omit({ id: true, timestamp: true, reactionDiff: true })).mutation(async ({ input }) => {
+    const newMessage: Omit<Message, "id"> = {
       text: input.text,
       timestamp: Date.now(),
       chatRoomId: input.chatRoomId,
@@ -67,12 +30,12 @@ export const appRouter = router({
       reactionDiff: 0,
     };
 
-    messages.push(newMessage);
+    const { id } = await MessageModel.create(newMessage);
 
     // Emit to all subscribers
-    (messageSubscribers[input.chatRoomId] || []).forEach((callback) => callback(newMessage));
+    (messageSubscribers[input.chatRoomId] || []).forEach((callback) => callback({ ...newMessage, id }));
 
-    return newMessage;
+    return { ...newMessage, id };
   }),
 
   reactToMessage: publicProcedure
@@ -82,17 +45,22 @@ export const appRouter = router({
         type: z.enum(["like", "dislike"]),
       })
     )
-    .mutation(({ input }) => {
-      const message = messages.find(({ id }) => id === input.messageId);
+    .mutation(async ({ input }) => {
+      const message = await MessageModel.findById(input.messageId);
       if (!message) {
         return;
       }
 
       message.reactionDiff += input.type === "like" ? 1 : -1;
+      await message.save();
     }),
 
   // WebSocket subscription
-  onMessage: publicProcedure.input(z.object({ chatRoomId: z.string() })).subscription(({ input }) => {
+  onMessage: publicProcedure.input(z.object({ chatRoomId: z.string() })).subscription(async ({ input }) => {
+    const chatRoom = await ChatRoomModel.findById(input.chatRoomId);
+    if (!chatRoom) {
+      throw new Error("Chat room not found");
+    }
     return observable<Message>((emit) => {
       const onMessage = (data: Message) => {
         emit.next(data);
