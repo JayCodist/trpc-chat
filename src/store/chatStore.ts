@@ -3,15 +3,33 @@ import { create } from "zustand";
 
 interface ChatStore {
   chatRooms: ChatRoom[];
-  messages: Message[];
+  messagesMap: Record<string, Message[]>;
   addMessage: (message: Message) => void;
+  setChatRooms: (chatRooms: ChatRoom[]) => void;
+  initializeMessages: (chatRoomId: string, messages: Message[]) => void;
 }
 
 export const useChatStore = create<ChatStore>((set) => ({
   chatRooms: [],
-  messages: [],
-  addMessage: (message) =>
+  messagesMap: {},
+  initializeMessages: (chatRoomId: string, messages: Message[]) =>
     set((state) => ({
-      messages: [...state.messages, message],
+      messagesMap: {
+        ...state.messagesMap,
+        [chatRoomId]: messages,
+      },
+    })),
+  addMessage: (message) =>
+    set((state) => {
+      return {
+        messagesMap: {
+          ...state.messagesMap,
+        [message.chatRoomId]: [...(state.messagesMap[message.chatRoomId] || []), message],
+        },
+      };
+    }),
+  setChatRooms: (chatRooms) =>
+    set(() => ({
+      chatRooms,
     })),
 }));

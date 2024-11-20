@@ -25,4 +25,8 @@ export const useTRPCStore = create<TRPCStore>((set) => ({
     });
     set({ client });
   },
-})); 
+}));
+
+export const getClient = () => {
+  return useTRPCStore.getState().client;
+}; 

@@ -47,8 +47,8 @@ export const appRouter = router({
     return chatRooms;
   }),
 
-  getRecentMessages: publicProcedure.query(() => {
-    return messages;
+  getRecentMessages: publicProcedure.input(z.object({ chatRoomId: z.string() })).query(({ input }) => {
+    return messages.filter((message) => message.chatRoomId === input.chatRoomId);
   }),
 
   signIn: publicProcedure
@@ -57,20 +57,20 @@ export const appRouter = router({
       users.push({ id: uuidv4(), ...input });
     }),
 
-  sendMessage: publicProcedure.input(messageSchema).mutation(({ input }) => {
+  sendMessage: publicProcedure.input(messageSchema.omit({ id: true, timestamp: true, reactionDiff: true })).mutation(({ input }) => {
     const newMessage: Message = {
       id: uuidv4(),
       text: input.text,
       timestamp: Date.now(),
       chatRoomId: input.chatRoomId,
       userName: input.userName,
-      reactionDiff: input.reactionDiff || 0,
+      reactionDiff: 0,
     };
 
     messages.push(newMessage);
 
     // Emit to all subscribers
-    messageSubscribers.forEach((callback) => callback(newMessage));
+    (messageSubscribers[input.chatRoomId] || []).forEach((callback) => callback(newMessage));
 
     return newMessage;
   }),
@@ -92,23 +92,23 @@ export const appRouter = router({
     }),
 
   // WebSocket subscription
-  onMessage: publicProcedure.subscription(() => {
+  onMessage: publicProcedure.input(z.object({ chatRoomId: z.string() })).subscription(({ input }) => {
     return observable<Message>((emit) => {
       const onMessage = (data: Message) => {
         emit.next(data);
       };
 
-      messageSubscribers.add(onMessage);
+      (messageSubscribers[input.chatRoomId] || new Set()).add(onMessage);
 
       // Cleanup when client disconnects
       return () => {
-        messageSubscribers.delete(onMessage);
+        (messageSubscribers[input.chatRoomId] || new Set()).delete(onMessage);
       };
     });
   }),
 });
 
 // Set to store subscription callbacks
-const messageSubscribers = new Set<(message: Message) => void>();
+const messageSubscribers: Record<string, Set<(message: Message) => void>> = {};
 
 export type AppRouter = typeof appRouter;
