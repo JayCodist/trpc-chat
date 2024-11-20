@@ -15,14 +15,15 @@ export const appRouter = router({
     return MessageModel.find({ chatRoomId: input.chatRoomId }).sort({ timestamp: -1 }).limit(100).lean().exec();
   }),
 
-  signIn: publicProcedure
-    .input(userSchema.omit({ id: true }))
-    .mutation(({ input }) => {
-      return UserModel.create({ ...input });
+  login: publicProcedure
+    .input(userSchema.omit({ _id: true }))
+    .mutation(async ({ input }) => {
+      const user = await UserModel.create({ username: input.username });
+      return user;
     }),
 
-  sendMessage: publicProcedure.input(messageSchema.omit({ id: true, timestamp: true, reactionDiff: true })).mutation(async ({ input }) => {
-    const newMessage: Omit<Message, "id"> = {
+  sendMessage: publicProcedure.input(messageSchema.omit({ _id: true, timestamp: true, reactionDiff: true })).mutation(async ({ input }) => {
+    const newMessage: Omit<Message, "_id"> = {
       text: input.text,
       timestamp: Date.now(),
       chatRoomId: input.chatRoomId,
@@ -30,12 +31,12 @@ export const appRouter = router({
       reactionDiff: 0,
     };
 
-    const { id } = await MessageModel.create(newMessage);
+    const { _id } = await MessageModel.create(newMessage);
 
     // Emit to all subscribers
-    (messageSubscribers[input.chatRoomId] || []).forEach((callback) => callback({ ...newMessage, id }));
+    (messageSubscribers[input.chatRoomId] || []).forEach((callback) => callback({ ...newMessage, _id }));
 
-    return { ...newMessage, id };
+    return { ...newMessage, _id };
   }),
 
   reactToMessage: publicProcedure
@@ -61,6 +62,8 @@ export const appRouter = router({
     if (!chatRoom) {
       throw new Error("Chat room not found");
     }
+    chatRoom.userCount += 1;
+    await chatRoom.save();
     return observable<Message>((emit) => {
       const onMessage = (data: Message) => {
         emit.next(data);
@@ -73,6 +76,17 @@ export const appRouter = router({
         (messageSubscribers[input.chatRoomId] || new Set()).delete(onMessage);
       };
     });
+  }),
+
+  leaveChatRoom: publicProcedure.input(z.object({ chatRoomId: z.string() })).mutation(async ({ input }) => {
+    const chatRoom = await ChatRoomModel.findById(input.chatRoomId);
+    if (!chatRoom) {
+      return;
+    }
+    if (chatRoom.userCount > 0) {
+      chatRoom.userCount -= 1;
+      await chatRoom.save();
+    }
   }),
 });
 

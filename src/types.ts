@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const messageSchema = z.object({
-  id: z.string(),
+  _id: z.string(),
   text: z.string(),
   timestamp: z.number(),
   chatRoomId: z.string(),
@@ -10,12 +10,12 @@ export const messageSchema = z.object({
 });
 
 export const userSchema = z.object({
-  id: z.string(),
+  _id: z.string(),
   username: z.string(),
 });
 
 export const chatRoomSchema = z.object({
-  id: z.string(),
+  _id: z.string(),
   name: z.string(),
   userCount: z.number(),
   createdAt: z.number(),

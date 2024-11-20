@@ -1,16 +1,15 @@
-import { Message, messageSchema } from "../../types";
-import { model } from "mongoose";
-import { toMongooseSchema } from "mongoose-zod";
+import { Message } from "../../types";
+import { model, Schema } from "mongoose";
 
 const DOCUMENT_NAME = "Message";
 const COLLECTION_NAME = "messages";
 
-const schema = toMongooseSchema(messageSchema.mongoose());
-
-export const MessageModel = model<Message>(DOCUMENT_NAME, schema.omit(["id"]), COLLECTION_NAME);
-
-schema.set('toJSON', {
-  virtuals: true,
-  versionKey:false,
-  transform: function (doc, ret) { delete ret._id }
+const schema = new Schema<Message>({
+  text: { type: String, required: true },
+  timestamp: { type: Number, required: true, index: true },
+  chatRoomId: { type: String, required: true, index: true },
+  userName: { type: String, required: true, index: true },
+  reactionDiff: { type: Number, required: true },
 });
+
+export const MessageModel = model<Message>(DOCUMENT_NAME, schema, COLLECTION_NAME);

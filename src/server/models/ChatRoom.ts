@@ -1,21 +1,18 @@
-import { ChatRoom, chatRoomSchema } from "../../types";
-import { model } from "mongoose";
-import { toMongooseSchema } from "mongoose-zod";
+import { ChatRoom } from "../../types";
+import { model, Schema } from "mongoose";
 
 const DOCUMENT_NAME = "ChatRoom";
 const COLLECTION_NAME = "chatrooms";
 
-const schema = toMongooseSchema(chatRoomSchema.mongoose());
-
-export const ChatRoomModel = model<ChatRoom>(DOCUMENT_NAME, schema.omit(["id"]), COLLECTION_NAME);
-
-schema.set('toJSON', {
-  virtuals: true,
-  versionKey:false,
-  transform: function (doc, ret) { delete ret._id }
+const schema = new Schema<ChatRoom>({
+  name: { type: String, required: true },
+  userCount: { type: Number, required: true },
+  createdAt: { type: Number, required: true },
 });
 
-export const seedChatRooms: Omit<ChatRoom, "id">[] = [
+export const ChatRoomModel = model<ChatRoom>(DOCUMENT_NAME, schema, COLLECTION_NAME);
+
+export const seedChatRooms: Omit<ChatRoom, "_id">[] = [
   {
     name: "The Rooks",
     userCount: 0,
