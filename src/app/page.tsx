@@ -171,6 +171,17 @@ const Messages = ({ messages }: { messages: Message[] | undefined }) => {
             })}
           </span>
           <span>{message.text}</span>
+          <span className="flex items-center gap-2">
+            <button className="text-xs text-gray-400">
+              <img src="/thumbs-up.svg" alt="thumbs up" className="w-4 h-4" />
+            </button>
+            <span className="text-xs text-gray-400">
+              {message.reactionDiff}
+            </span>
+            <button className="text-xs text-gray-400">
+              <img src="/thumbs-down.svg" alt="thumbs down" className="w-4 h-4" />
+            </button>
+          </span>
         </div>
       ))}
     </div>
