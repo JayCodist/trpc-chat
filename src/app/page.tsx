@@ -1,15 +1,22 @@
 "use client";
 
-import { enterChatRoom, leaveChatRoom, sendMessage, signIn } from "@/services/chat";
+import {
+  enterChatRoom,
+  leaveChatRoom,
+  sendMessage,
+  signIn,
+} from "@/services/chat";
 import { useChatStore } from "@/store/chatStore";
 import { useTRPCStore } from "@/store/trpcStore";
-import { useEffect, useState } from "react";
+import { Message } from "@/types";
+import { useEffect, useRef, useState } from "react";
 
 export default function Home() {
   const { initialize } = useTRPCStore();
   const { chatRooms, messagesMap, currentUser, isLoggingIn } = useChatStore();
   const [username, setUsername] = useState("");
   const [message, setMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     initialize();
@@ -20,9 +27,16 @@ export default function Home() {
     signIn(username);
   };
 
-  const handleSendMessage = (e: React.FormEvent<HTMLFormElement>, chatRoomId: string) => {
+  const handleSendMessage = (
+    e: React.FormEvent<HTMLFormElement>,
+    chatRoomId: string
+  ) => {
     e.preventDefault();
-    sendMessage({ text: message, chatRoomId, userName: currentUser?.username || "" });
+    sendMessage({
+      text: message,
+      chatRoomId,
+      userName: currentUser?.username || "",
+    });
     setMessage("");
   };
 
@@ -34,6 +48,11 @@ export default function Home() {
           onSubmit={handleSignIn}
         >
           <h1 className="text-5xl font-bold mb-20">TRPC Chat</h1>
+          {errorMessage && (
+            <span className="text-red-500 mb-4 p-10 bg-red-100 rounded-md">
+              {errorMessage}
+            </span>
+          )}
           <h1 className="text-2xl font-bold mb-4">What's your username?</h1>
           <input
             type="text"
@@ -94,32 +113,13 @@ export default function Home() {
               className="w-full relative h-[60vh] mb-6 flex flex-col justify-between border border-gray-300 rounded-md px-4 pb-20"
             >
               <h1 className="text-xl font-bold mt-2 mb-6 text-center">
-                {chatRooms.find((chatRoom) => chatRoom._id === chatRoomId)
-                  ?.name}{" "}
+                {
+                  chatRooms.find((chatRoom) => chatRoom._id === chatRoomId)
+                    ?.name
+                }{" "}
                 Chat
               </h1>
-              <div className="flex flex-col gap-2 min-h-[10rem] overflow-y-auto">
-                {messages?.map((message) => (
-                  <div
-                    key={message._id}
-                    className="bg-gray-100 px-4 py-2 rounded-md flex flex-col gap-2 relative"
-                  >
-                    <span className="text-xs text-gray-400">
-                      @{message.userName}
-                    </span>
-                    <span className="text-xs text-gray-400 absolute top-2 right-2">
-                      {new Date(message.timestamp).toLocaleTimeString("en", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                        day: "numeric",
-                        month: "long",
-                      })}
-                    </span>
-                    <span>{message.text}</span>
-                  </div>
-                ))}
-              </div>
+              <Messages messages={messages} />
               <form
                 className="flex gap-2 absolute bottom-0 left-0 w-full"
                 onSubmit={(e) => handleSendMessage(e, chatRoomId)}
@@ -128,10 +128,15 @@ export default function Home() {
                   type="text"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder={`Enter Message for the ${chatRooms.find((chatRoom) => chatRoom._id === chatRoomId)?.name} Chat`}
+                  placeholder={`Enter Message for the ${
+                    chatRooms.find((chatRoom) => chatRoom._id === chatRoomId)
+                      ?.name
+                  } Chat`}
                   className="border border-gray-300 rounded-md p-2 w-full"
                 />
-                <button className="bg-blue-500 text-white p-2 rounded-md">Send</button>
+                <button className="bg-blue-500 text-white p-2 rounded-md">
+                  Send
+                </button>
               </form>
             </div>
           ))}
@@ -140,3 +145,34 @@ export default function Home() {
     </div>
   );
 }
+
+const Messages = ({ messages }: { messages: Message[] | undefined }) => {
+  const chatRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }
+  }, [messages]);
+  return (
+    <div className="flex flex-col gap-2 min-h-[10rem] overflow-y-auto" ref={chatRef}>
+      {messages?.map((message) => (
+        <div
+          key={message._id}
+          className="bg-gray-100 px-4 py-2 rounded-md flex flex-col gap-2 relative"
+        >
+          <span className="text-xs text-gray-400">@{message.userName}</span>
+          <span className="text-xs text-gray-400 absolute top-2 right-2">
+            {new Date(message.timestamp).toLocaleTimeString("en", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+              day: "numeric",
+              month: "long",
+            })}
+          </span>
+          <span>{message.text}</span>
+        </div>
+      ))}
+    </div>
+  );
+};

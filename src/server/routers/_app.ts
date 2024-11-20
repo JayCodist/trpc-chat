@@ -11,8 +11,8 @@ export const appRouter = router({
     return ChatRoomModel.find().lean().exec();
   }),
 
-  getRecentMessages: publicProcedure.input(z.object({ chatRoomId: z.string() })).query(({ input }) => {
-    return MessageModel.find({ chatRoomId: input.chatRoomId }).sort({ timestamp: -1 }).limit(100).lean().exec();
+  getMessages: publicProcedure.input(z.object({ chatRoomId: z.string() })).query(({ input }) => {
+    return MessageModel.find({ chatRoomId: input.chatRoomId }).sort({ timestamp: -1 }).lean().exec();
   }),
 
   login: publicProcedure
@@ -69,11 +69,14 @@ export const appRouter = router({
         emit.next(data);
       };
 
-      (messageSubscribers[input.chatRoomId] || new Set()).add(onMessage);
+      if (!messageSubscribers[input.chatRoomId]) {
+        messageSubscribers[input.chatRoomId] = new Set();
+      }
+      (messageSubscribers[input.chatRoomId]).add(onMessage);
 
       // Cleanup when client disconnects
       return () => {
-        (messageSubscribers[input.chatRoomId] || new Set()).delete(onMessage);
+        (messageSubscribers[input.chatRoomId])?.delete(onMessage);
       };
     });
   }),

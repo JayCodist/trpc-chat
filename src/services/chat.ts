@@ -26,7 +26,7 @@ export const sendMessage = async ({
     return;
   }
 
-  const message = await client.sendMessage.mutate({
+  await client.sendMessage.mutate({
     text,
     chatRoomId,
     userName,
@@ -34,15 +34,14 @@ export const sendMessage = async ({
     timestamp: Date.now(),
     reactionDiff: 0,
   } as Message);
-  useChatStore.getState().addMessage(message);
 };
 
-export const fetchRecentMessages = async (chatRoomId: string) => {
+export const fetchMessages = async (chatRoomId: string) => {
   const client = getClient();
   if (!client) {
     return;
   }
-  const messages = await client.getRecentMessages.query({ chatRoomId });
+  const messages = await client.getMessages.query({ chatRoomId });
   useChatStore.getState().initializeMessages(chatRoomId, messages);
 };
 
@@ -51,7 +50,7 @@ export const fetchChatRoomMessages = async (chatRoomId: string) => {
   if (!client) {
     return;
   }
-  const messages = await client.getRecentMessages.query({ chatRoomId });
+  const messages = await client.getMessages.query({ chatRoomId });
   useChatStore.getState().initializeMessages(chatRoomId, messages);
 };
 
@@ -73,7 +72,7 @@ export const enterChatRoom = async (chatRoomId: string) => {
     return;
   }
 
-  await fetchRecentMessages(chatRoomId);
+  await fetchMessages(chatRoomId);
   const unsubscribe = client.onMessage.subscribe(
     { chatRoomId },
     {
